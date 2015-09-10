@@ -3,17 +3,20 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <string.h>
-
+#include <regex.h>
+#include <stdlib.h>
 
 int main (int argc, const char *argv[])
 {
-	int rv = 1;
 	pid_t ch;
 	int status;
 	int pipefd[2];
 	FILE *cfd;
+	int rrv;
+	regex_t *regex = malloc(4);
 
-	const char *prog = "uname";
+	const char *prog  = "uname";
+	const char *check = "Debian";
 	 
 	if (pipe(pipefd) == -1)
 	{
@@ -21,23 +24,51 @@ int main (int argc, const char *argv[])
 		return 1;
 	}
 
+	if (rrv = regcomp(regex, check, 0)  != 0)
+	{
+		int   errsize;
+		char *errstr;
+		  
+		errsize = regerror( rrv, regex, NULL, REG_NOSUB);
+		errstr  = malloc( errsize );
+		regerror(rrv, regex, errstr, errsize);
+		printf("regex (%s) failed compiling: %s\n", check, errstr);
+		return 2;
+	}
+
 	cfd = fdopen(pipefd[0], "r");	
 
 	if (ch = fork())
 	{
-		char *buf[64];
-		int s;
+		char *line = NULL;
+		size_t s;
+		int match = 0;
+
 		close(pipefd[1]);
 		printf("hello from parent, child = %i\n", ch);
 		
-		while (s = fread(buf, 1, 1, cfd) > 0)
+		while (getline(&line, &s, cfd) > 0)
 		{
-				s = write(1, buf, s);
+			printf("got line: %s", line);
+			
+			if ( regexec(regex, line, 0, NULL, 0) == 0 )
+			{
+				printf("line matched\n");
+				match = 1;
+			}
 		}
-
+		
 		close(pipefd[0]);
 		waitpid(ch, &status,0 );
 		printf("child %i exited with status %i\n", ch, WEXITSTATUS(status) );
+		
+		if (WEXITSTATUS(status) != 0)
+			return 3;
+		if (match != 1)
+			return 4;
+
+		return 0;
+		
 		
 	}
 	else
