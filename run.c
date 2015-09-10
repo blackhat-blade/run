@@ -6,6 +6,12 @@
 #include <regex.h>
 #include <stdlib.h>
 
+
+int run(const char *prog, int argc, const char *argv[], const char *check)
+{
+	return 0;
+}
+
 int main (int argc, const char *argv[])
 {
 	pid_t ch;
@@ -13,10 +19,10 @@ int main (int argc, const char *argv[])
 	int pipefd[2];
 	FILE *cfd;
 	int rrv;
-	regex_t *regex = malloc(4);
+	regex_t *regex = malloc(0);
 
-	const char *prog  = "uname";
-	const char *check = "Debian";
+	const char *prog  = "dmesg";
+	const char *check = "wuseldusl \\d+";
 	 
 	if (pipe(pipefd) == -1)
 	{
@@ -49,12 +55,27 @@ int main (int argc, const char *argv[])
 		
 		while (getline(&line, &s, cfd) > 0)
 		{
+			int r;
 			printf("got line: %s", line);
-			
-			if ( regexec(regex, line, 0, NULL, 0) == 0 )
+
+			r = regexec(regex, line, 0, NULL, 0);
+
+			if (r == 0 )
 			{
 				printf("line matched\n");
 				match = 1;
+			}
+			else
+			{
+				if (r != REG_NOMATCH)
+				{
+					printf("regex error %i\n", r);
+					return 6; 
+				}
+				else
+				{
+					printf("no match\n");
+				}	
 			}
 		}
 		
@@ -68,16 +89,14 @@ int main (int argc, const char *argv[])
 			return 4;
 
 		return 0;
-		
-		
 	}
 	else
 	{
 		close(pipefd[0]);
 		dup2(pipefd[1],1);
-		execlp("uname", "", "-a", (char *) NULL);
+		execlp(prog, "",  (char *) NULL);
 		printf("exec failed: '%s'\n", strerror(errno));
+		return 5;	
 	}
 
-	return rv;
 }
