@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+use 5.012;
+use warnings;
+
+sub Compile
+{
+	my $CC = $ENV{CC};
+	my $CF = $ENV{CFLAGS};
+
+	my ($c, $o) = @_;
+
+	system $CC, ($CF ? $CF : ()), '-o', $o, '-c', $c and die "failed compile";
+	return 1;
+}
+
+sub Link 
+{
+	my $LD = $ENV{CC};
+	my $LF = $ENV{LDFLAGS};
+
+	my ($b, @o) = @_;
+
+	system  $LD, ($LF ? $LF : ()), '-o', $b, @o,  and die "failed link";
+	return 1;
+}
+
+sub Bin
+{
+	my $b = shift;
+
+	foreach ( keys %{ $b->{o} } )
+	{
+		Compile  $b->{o}{$_}, $_;
+	} 
+
+	Link $b->{bin}, map { $_   }  keys  %{ $b->{o} }
+}
+
+
+Bin ( { bin => 'run', o => { 'run.o' => 'run.c'  }} );
