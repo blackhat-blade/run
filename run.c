@@ -118,12 +118,15 @@ int main (int argc, const char *argv[])
 	const char *prog   = NULL;
 	const char *check  = defmatch;
 
+ 	const char **args;
+
 	int  timeout = 0;
 	int  verbose = 0;
 
 	int  o;
 	int  ac;
-
+	int  as;
+	
 	while ( (o = getopt(argc, (char **) argv, optstring )  ) != -1 )
 	{
 		switch (o)
@@ -145,7 +148,12 @@ int main (int argc, const char *argv[])
 	
 
 	prog = argv[optind];	
-	ac = argc - (optind + 1);
+	as   = optind + 1;
+	ac = argc - as;
+
+	args = malloc(  (ac + 2) * sizeof(const char *) ); 
+	args[0]  = prog;
+	args[ac] = NULL;
 
 	if (verbose > 3) fprintf(stderr, "timeout   = %i\n", timeout);	
 	if (verbose > 3) fprintf(stderr, "match     = %s\n", check);	
@@ -163,6 +171,31 @@ int main (int argc, const char *argv[])
 	{
 		fprintf(stderr, usage, argv[0]);
 		return XERR_USAGE;
+	}
+
+
+	if ( ( ac > 0 ) )
+	{
+		int i = 0;
+ 		if  ( verbose > 3 )
+		{   
+			while (i < ac)
+			{
+				const char *aval = argv[ as + i ]; 
+				fprintf(stderr, "arg % 3i   = %s\n", i, aval);
+				args[ i + 1 ] = aval;
+				++i;
+			}
+		}
+		else
+		{
+			while (i <  ac)
+			{
+				args[ i + 1] =  argv[ as + i ]; 
+				++i;
+			}
+		}
+			
 	}
 
 	/*char *args[128];
