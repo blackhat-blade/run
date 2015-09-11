@@ -63,26 +63,32 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 		while (getline(&line, &s, cfd) > 0)
 		{
 			int r;
-			printf("got line: %s", line);
+			
+			if ( verbose > 4 )
+				fprintf(stderr, "got line: %s", line);
 
 			r = regexec(regex, line, 0, NULL, 0);
  
 
 			if (r == 0 )
 			{
-				printf("line matched\n");
+				if ( verbose > 3 )
+					fprintf(stderr, "line matched\n");
 				match = 1;
 			}
 			else
 			{
 				if (r != REG_NOMATCH)
 				{
-					printf("regex error %i\n", r);
+					if ( verbose > 0 )
+						fprintf(stderr, "regex error %i\n", r);
+
 					return XERR_REGERR; 
 				}
 				else
 				{
-					printf("no match\n");
+					if ( verbose > 4 )
+						fprintf(stderr, "no match\n");
 				}	
 			}
 		}
