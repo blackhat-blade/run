@@ -16,7 +16,7 @@ const int XERR_EXEC       = 6;
 const int XERR_USAGE      = 7;
 const int XERR_TMOUTNEG   = 8;
 
-int run(const char *prog, char *argv[], const char *check)
+int run(const char *prog, char *argv[], const char *check, int timeout, int verbose)
 {
 	pid_t ch;
 	int status;
@@ -27,19 +27,24 @@ int run(const char *prog, char *argv[], const char *check)
 
 	if (pipe(pipefd) == -1)
 	{
-		printf("pipe failed: (%s)", strerror(errno));
+		if ( verbose > 0 )
+			fprintf(stderr, "pipe failed: (%s)", strerror(errno));
 		return XERR_PIPE;
 	}
 
 	if (rrv = regcomp(regex, check, 0)  != 0)
 	{
-		int   errsize;
-		char *errstr;
-		  
-		errsize = regerror( rrv, regex, NULL, REG_NOSUB);
-		errstr  = malloc( errsize );
-		regerror(rrv, regex, errstr, errsize);
-		printf("regex (%s) failed compiling: %s\n", check, errstr);
+		if ( verbose > 0 )
+		{ 
+			int   errsize;
+			char *errstr;
+
+			errsize = regerror( rrv, regex, NULL, REG_NOSUB);
+			errstr  = malloc( errsize );
+			regerror(rrv, regex, errstr, errsize);
+			fprintf(stderr, "regex (%s) failed compiling: %s\n",
+				check, errstr);
+		}
 		return XERR_PIPE;
 	}
 
@@ -52,7 +57,8 @@ int run(const char *prog, char *argv[], const char *check)
 		int match = 0;
 
 		close(pipefd[1]);
-		printf("hello from parent, child = %i\n", ch);
+		if ( verbose > 2 )
+			fprintf(stderr, "childpid = %i\n", ch);
 		
 		while (getline(&line, &s, cfd) > 0)
 		{
@@ -83,7 +89,10 @@ int run(const char *prog, char *argv[], const char *check)
 		
 		close(pipefd[0]);
 		waitpid(ch, &status,0 );
-		printf("child %i exited with status %i\n", ch, WEXITSTATUS(status) );
+
+		if ( verbose > 1 )
+			fprintf(stderr, "child %i exited with status %i\n",
+				ch, WEXITSTATUS(status) );
 		
 		if (WEXITSTATUS(status) != 0)
 			return XERR_EXIT;
@@ -94,16 +103,14 @@ int run(const char *prog, char *argv[], const char *check)
 	}
 	else
 	{
-		const char *aaar[24];	
-		aaar[0] = prog;
-		aaar[1] = NULL;	
-	
 		close(pipefd[0]);
 		dup2(pipefd[1],1);
 		
+		execvp(prog, (char **) argv );
 
-		execvp(prog, (char **) aaar );
-		printf("exec failed: '%s'\n", strerror(errno));
+		if ( verbose > 0 )
+			fprintf(stderr, "exec failed: '%s'\n", strerror(errno));
+
 		return XERR_EXEC;	
 	}
 }
@@ -195,12 +202,7 @@ int main (int argc, const char *argv[])
 		}
 	}
 
-	/*char *args[128];
-	args[0] = prog;
-	args[1] = NULL;
-	*/
-	return 0;
-	//return run(prog,( char **)args,  check);
+	return run(prog,( char **)args,  check, timeout, verbose);
 
 }
  
