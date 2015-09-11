@@ -16,8 +16,7 @@ const int XERR_EXEC       = 6;
 const int XERR_USAGE      = 7;
 const int XERR_TMOUTNEG   = 8;
 
-	int run(const char *prog, char *argv[], const char *check)
- 
+int run(const char *prog, char *argv[], const char *check)
 {
 	pid_t ch;
 	int status;
@@ -173,7 +172,6 @@ int main (int argc, const char *argv[])
 		return XERR_USAGE;
 	}
 
-
 	if ( ( ac > 0 ) )
 	{
 		int i = 0;
@@ -195,7 +193,6 @@ int main (int argc, const char *argv[])
 				++i;
 			}
 		}
-			
 	}
 
 	/*char *args[128];
