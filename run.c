@@ -5,6 +5,7 @@
 #include <string.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <limits.h>
 
 const int XERR_PIPE       = 1;
 const int XERR_REGCOMP    = 2;
@@ -12,6 +13,8 @@ const int XERR_REGERR     = 3;
 const int XERR_EXIT       = 4;
 const int XERR_REGNOMATCH = 5;
 const int XERR_EXEC       = 6;
+const int XERR_USAGE      = 7;
+const int XERR_TMOUTNEG   = 8;
 
 	int run(const char *prog, char *argv[], const char *check)
  
@@ -108,14 +111,67 @@ const int XERR_EXEC       = 6;
 
 int main (int argc, const char *argv[])
 {
+	const char *usage      = "Usage %s [-t timeout] [-m match] [-v] cmd [ARGS]";
+	const char *optstring  = "t:m:v";
 
-	char *prog  = (char *) argv[1];
-	char *check = "";
-	char *args[128];
+	const char *defmatch   = ".";
+	const char *prog   = NULL;
+	const char *check  = defmatch;
+
+	int  timeout = 0;
+	int  verbose = 0;
+
+	int  o;
+	int  ac;
+
+	while ( (o = getopt(argc, (char **) argv, optstring )  ) != -1 )
+	{
+		switch (o)
+		{
+			case 't':
+				timeout = atoi(optarg);
+				break;
+			case 'm':
+				check = optarg; 
+				break;
+			case 'v':
+				++verbose;
+				break;
+			default:
+				fprintf(stderr, usage, argv[0]);
+				return XERR_USAGE; 
+		}
+	}
+	
+
+	prog = argv[optind];	
+	ac = argc - (optind + 1);
+
+	if (verbose > 3) fprintf(stderr, "timeout   = %i\n", timeout);	
+	if (verbose > 3) fprintf(stderr, "match     = %s\n", check);	
+	if (verbose > 3) fprintf(stderr, "verbosity = %i\n", verbose);	
+	if (verbose > 3) fprintf(stderr, "prog      = %s\n", prog);	
+	if (verbose > 3) fprintf(stderr, "argcount  = %i\n", ac);	
+
+	if (timeout < 0)
+	{
+		fprintf(stderr, "timeout < 0. int overflow? (maxint = %i)", INT_MAX);
+		return XERR_TMOUTNEG;
+	}
+
+	if ( prog == NULL )
+	{
+		fprintf(stderr, usage, argv[0]);
+		return XERR_USAGE;
+	}
+
+	/*char *args[128];
 	args[0] = prog;
 	args[1] = NULL;
-
-	return run(prog,( char **)args,  check);
+	*/
+	return 0;
+	//return run(prog,( char **)args,  check);
 
 }
+ 
  
