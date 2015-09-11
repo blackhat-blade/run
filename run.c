@@ -6,13 +6,15 @@
 #include <regex.h>
 #include <stdlib.h>
 
+const int XERR_PIPE       = 1;
+const int XERR_REGCOMP    = 2;
+const int XERR_REGERR     = 3;
+const int XERR_EXIT       = 4;
+const int XERR_REGNOMATCH = 5;
+const int XERR_EXEC       = 6;
 
-int run(const char *prog, int argc, const char *argv[], const char *check)
-{
-	return 0;
-}
-
-int main (int argc, const char *argv[])
+	int run(const char *prog, char *argv[], const char *check)
+ 
 {
 	pid_t ch;
 	int status;
@@ -21,13 +23,10 @@ int main (int argc, const char *argv[])
 	int rrv;
 	regex_t *regex = malloc(0);
 
-	const char *prog  = "dmesg";
-	const char *check = "wuseldusl \\d+";
-	 
 	if (pipe(pipefd) == -1)
 	{
 		printf("pipe failed: (%s)", strerror(errno));
-		return 1;
+		return XERR_PIPE;
 	}
 
 	if (rrv = regcomp(regex, check, 0)  != 0)
@@ -39,7 +38,7 @@ int main (int argc, const char *argv[])
 		errstr  = malloc( errsize );
 		regerror(rrv, regex, errstr, errsize);
 		printf("regex (%s) failed compiling: %s\n", check, errstr);
-		return 2;
+		return XERR_PIPE;
 	}
 
 	cfd = fdopen(pipefd[0], "r");	
@@ -59,6 +58,7 @@ int main (int argc, const char *argv[])
 			printf("got line: %s", line);
 
 			r = regexec(regex, line, 0, NULL, 0);
+ 
 
 			if (r == 0 )
 			{
@@ -70,7 +70,7 @@ int main (int argc, const char *argv[])
 				if (r != REG_NOMATCH)
 				{
 					printf("regex error %i\n", r);
-					return 6; 
+					return XERR_REGERR; 
 				}
 				else
 				{
@@ -84,19 +84,38 @@ int main (int argc, const char *argv[])
 		printf("child %i exited with status %i\n", ch, WEXITSTATUS(status) );
 		
 		if (WEXITSTATUS(status) != 0)
-			return 3;
+			return XERR_EXIT;
 		if (match != 1)
-			return 4;
+			return XERR_REGNOMATCH;
 
 		return 0;
 	}
 	else
 	{
+		const char *aaar[24];	
+		aaar[0] = prog;
+		aaar[1] = NULL;	
+	
 		close(pipefd[0]);
 		dup2(pipefd[1],1);
-		execlp(prog, "",  (char *) NULL);
+		
+
+		execvp(prog, (char **) aaar );
 		printf("exec failed: '%s'\n", strerror(errno));
-		return 5;	
+		return XERR_EXEC;	
 	}
+}
+
+int main (int argc, const char *argv[])
+{
+
+	char *prog  = (char *) argv[1];
+	char *check = "";
+	char *args[128];
+	args[0] = prog;
+	args[1] = NULL;
+
+	return run(prog,( char **)args,  check);
 
 }
+ 
