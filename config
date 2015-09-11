@@ -1,0 +1,6 @@
+PATH=/dsoss/tools/bin:$PATH
+CC=/dsoss/tools/bin/x86_64-linux-musl-gcc
+CFLAGS=-Os
+LDFLAGS=-static
+
+export PATH CC CFLAGS LDFLAGS
