@@ -165,7 +165,11 @@ int main (int argc, const char *argv[])
 
 	args = malloc(  (ac + 2) * sizeof(const char *) ); 
 	args[0]  = prog;
-	args[ac] = NULL;
+
+	if (ac > 0)
+		args[ac] = NULL;
+	else
+		args[1]  = NULL;
 
 	if (verbose > 3) fprintf(stderr, "timeout   = %i\n", timeout);	
 	if (verbose > 3) fprintf(stderr, "match     = %s\n", check);	
