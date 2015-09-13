@@ -68,7 +68,6 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 				fprintf(stderr, "got line: %s", line);
 
 			r = regexec(regex, line, 0, NULL, 0);
- 
 
 			if (r == 0 )
 			{
@@ -158,7 +157,6 @@ int main (int argc, const char *argv[])
 		}
 	}
 	
-
 	prog = argv[optind];	
 	as   = optind + 1;
 	ac = argc - as;
