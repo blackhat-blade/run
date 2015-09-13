@@ -32,7 +32,7 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 		return XERR_PIPE;
 	}
 
-	if (rrv = regcomp(regex, check, 0)  != 0)
+	if (check != NULL && ( rrv = regcomp(regex, check, 0)  != 0 ) )
 	{
 		if ( verbose > 0 )
 		{ 
@@ -67,7 +67,12 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 			if ( verbose > 4 )
 				fprintf(stderr, "got line: %s", line);
 
+			if ( check == NULL )
+				continue;
+
 			r = regexec(regex, line, 0, NULL, 0);
+
+			
 
 			if (r == 0 )
 			{
@@ -101,7 +106,7 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 		
 		if (WEXITSTATUS(status) != 0)
 			return XERR_EXIT;
-		if (match != 1)
+		if (check != NULL &&  match != 1)
 			return XERR_REGNOMATCH;
 
 		return 0;
@@ -127,7 +132,7 @@ int main (int argc, const char *argv[])
 
 	const char *defmatch   = ".";
 	const char *prog   = NULL;
-	const char *check  = defmatch;
+	const char *check  = NULL;
 
  	const char **args;
 
