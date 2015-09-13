@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+
+use 5.012;
+use warnings;
+
+use IPC::Run qw( start finish );
+
+our ($testnum, @testnames, @testdescriptions);
+
+$testnum = 0;
+ 
+
+sub runsys
+{
+	my ($cmd, @args) = @_;
+	my ($t_start, $t_end, $rv,$h);
+
+	$rv =
+	{
+		status  => undef,
+		stdout  => '',
+		stderr  => '',
+		runtime => undef,
+	};
+
+	$t_start = time;
+
+	$h  = start ( [$cmd, @args], \undef, \$rv->{stdout}, \$rv->{stderr} );	
+	finish $h;
+
+	unless ($h)
+	{
+		die "run bailed out: $! $?";
+	}	
+
+	$t_end   = time;
+
+	$rv->{runtime} = $t_end - $t_start;
+	$rv->{result}  = $h->result;
+
+	return $rv;
+}
+
+sub test
+{
+	my ($cmd, $args, $test) = @_;
+	my $r;
+
+	++$testnum;
+
+	$test = sub { shift->{result} == 0 } unless $test;
+
+	eval 
+	{
+		$r = runsys $cmd, @{$args};
+	};
+
+	if ( $@ )
+	{
+		printf "BORK % 3i # %s %s\n", $testnum, $@, $testnames[ $testnum ];
+	}
+	elsif ( $test->($r) )
+	{
+		printf "PASS % 3i # %s\n", $testnum, $testnames[ $testnum ];
+	}
+	else
+	{
+	
+		printf "FAIL % 3i # %s\n", $testnum, $testnames[ $testnum ];
+	}
+	
+}
+
+sub name ($)
+{
+	$testnames[ $testnum +1 ] = shift;
+}
+
+sub description ($)
+{
+	$testdescriptions[ $testnum + 1 ] = shift;
+}
+
+my $file = shift;
+require $file;
+
+
