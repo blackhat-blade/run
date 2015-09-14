@@ -1,0 +1,17 @@
+run
+
+  $1 t/t 
+
+to run the tests. This requires perl 5.012 with 
+	IPC::Run
+	File::Basename
+	IO::Select
+	POSIX
+
+of which onlt IPC::Run isn't a core module.
+The t/t script is half of a reimplementation of run itself, lol.
+
+Currently no tests are supposed to fail.
+
+\b
+
