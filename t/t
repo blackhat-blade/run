@@ -6,9 +6,19 @@ use warnings;
 use IPC::Run qw( start finish );
 
 our $NAME = "run::testsuite";
-our ($testnum, @testnames, @testdescriptions);
+our ($testnum, @testnames, @testdescriptions, $failed);
 
 $testnum = 0;
+$failed  = 0;
+
+sub run_file
+{
+	my $file = shift;
+
+	require $file;
+	exit $failed;
+	
+}
 
 sub status($)
 {
@@ -70,9 +80,7 @@ sub all_files
 
 			status 'run';
 
-			print "foobar";
-			sleep 10;
-			exit 0;
+			run_file $file;
 		}
 		
 		status 'setup';
@@ -87,7 +95,8 @@ sub all_files
 
 			foreach my $ready ( $sel->can_read(0.25) )
 			{
-				my $c = (grep { $_->{pipe} == $ready } values %running)[0];
+				my $c = (grep { $_->{pipe} == $ready } 
+				              values %running)[0];
 				my $buf;
 
 				status 'collecting output from ' . $c->{pid};
@@ -112,7 +121,7 @@ sub all_files
 			
 			status "reaping $f";
 			$k =  delete $running{$f};
-			$k->{status} = $?;
+			$k->{status} = $? >> 8;
 			$finished{$f} = $k; 
 			$sel->remove($k->{pipe}) if $sel->exists($k->{pipe});
 		}
@@ -121,8 +130,25 @@ sub all_files
 	
 	status 'processing results';
 
-	use Data::Dumper;
-	print Dumper(\%finished);	
+	my ($failed) = 0;
+
+	foreach my $t ( values %finished  )
+	{
+		if ( $t->{status} == 0 )
+		{
+			printf "PASSED %s\n", $t->{file}; 
+		}
+		else
+		{
+			++$failed;
+			printf "FAILED %s\n", $t->{file}; 
+			print map  { s/^/\t/; s/$/\n/r } 
+			      grep { /(FAIL)|(BORK)/ } 
+			      split /\n/, $t->{stdout}; 
+		}
+	}
+
+	exit $failed;
 
 }
 
@@ -161,30 +187,34 @@ sub test
 {
 	my ($cmd, $args, $test) = @_;
 	my $r;
+	my $name;
 
 	++$testnum;
 
 	$test = sub { shift->{result} == 0 } unless $test;
+
 
 	eval 
 	{
 		$r = runsys $cmd, @{$args};
 	};
 
+	$name = $testnames[ $testnum ] // '';	
+
 	if ( $@ )
 	{
-		printf "BORK % 3i # %s %s\n", $testnum, $@, $testnames[ $testnum ];
+		printf "BORK % 3i # %s %s\n", $testnum, $@, $name;
+		++$failed;
 	}
 	elsif ( $test->($r) )
 	{
-		printf "PASS % 3i # %s\n", $testnum, $testnames[ $testnum ];
+		printf "PASS % 3i # %s\n", $testnum, $name;
 	}
 	else
 	{
-	
-		printf "FAIL % 3i # %s\n", $testnum, $testnames[ $testnum ];
+		printf "FAIL % 3i # %s\n", $testnum, $name;
+		++$failed;
 	}
-	
 }
 
 sub name ($)
@@ -205,7 +235,7 @@ if ( !$file or $file eq 'all' )
 }
 else
 {
-	require $file;
+	run_file $file;
 }
 
 
