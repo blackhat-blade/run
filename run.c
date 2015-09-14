@@ -32,7 +32,7 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 		return XERR_PIPE;
 	}
 
-	if (check != NULL && ( rrv = regcomp(regex, check, 0)  != 0 ) )
+	if (check != NULL && ( rrv = regcomp(regex, check, REG_EXTENDED)  != 0 ) )
 	{
 		if ( verbose > 0 )
 		{ 
