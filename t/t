@@ -5,10 +5,126 @@ use warnings;
 
 use IPC::Run qw( start finish );
 
+our $NAME = "run::testsuite";
 our ($testnum, @testnames, @testdescriptions);
 
 $testnum = 0;
- 
+
+sub status($)
+{
+	my $s = shift;
+
+	$0 .= " - $s" unless ( $0 =~ s/(?<= - ).*$/$s/ );
+	
+}
+
+sub all_files
+{
+	use File::Basename;
+	use IO::Select;
+	use POSIX qw( :sys_wait_h );
+	
+	my (%running, %finished);
+	my @files;
+	my $sel;	
+	
+	$0 = "$NAME master"; 
+	@files = glob join '/', dirname(__FILE__), '*.t'; 
+
+	$sel = IO::Select->new;
+
+	foreach my $file (@files)
+	{
+		my $p;
+		my ($in, $out);
+		
+		status "forking testrunner for $file"; 
+
+		unless ( pipe $in, $out )
+		{
+			die "pipe failed: $!";
+		}
+
+		if ($p = fork)
+		{
+			close $out or die "close (child pipe) failed: $!";
+
+			$running{$p} =
+			{
+				pid  => $p,
+				file => $file,
+				pipe => $in,
+			};
+
+			$sel->add($in);
+			
+		}
+		else
+		{
+			$0 = "$NAME testrunner $file";
+			status 'setup';
+			close $in or die "close (parent pipe) failed: $!";
+			close STDOUT or die "close (oldstdout) failed: $!";
+			open  STDOUT, '>&', $out or die "open stdout failed $!";
+			$| = 1;
+
+			status 'run';
+
+			print "foobar";
+			sleep 10;
+			exit 0;
+		}
+		
+		status 'setup';
+	}
+
+
+	while (my $left = keys %running)
+	{
+		if ( $sel->count )
+		{
+			status 'collecting output';
+
+			foreach my $ready ( $sel->can_read(0.25) )
+			{
+				my $c = (grep { $_->{pipe} == $ready } values %running)[0];
+				my $buf;
+
+				status 'collecting output from ' . $c->{pid};
+
+				if (  sysread( $ready, $buf, 4096 ) > 0 )
+				{
+					$c->{stdout} .= $buf;
+				}
+				else
+				{
+					$sel->remove( $ready );
+				}
+				
+			}
+		}
+		
+		status sprintf 'waiting for %i childs to finish', $left;
+
+		while ( (my $f = waitpid(-1, WNOHANG)) > 0 )
+		{
+			my $k;
+			
+			status "reaping $f";
+			$k =  delete $running{$f};
+			$k->{status} = $?;
+			$finished{$f} = $k; 
+			$sel->remove($k->{pipe}) if $sel->exists($k->{pipe});
+		}
+
+	}		
+	
+	status 'processing results';
+
+	use Data::Dumper;
+	print Dumper(\%finished);	
+
+}
 
 sub runsys
 {
@@ -82,6 +198,14 @@ sub description ($)
 }
 
 my $file = shift;
-require $file;
+
+if ( !$file or $file eq 'all' )
+{
+	all_files 
+}
+else
+{
+	require $file;
+}
 
 
