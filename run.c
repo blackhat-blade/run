@@ -72,8 +72,6 @@ int run(const char *prog, char *argv[], const char *check, int timeout, int verb
 
 			r = regexec(regex, line, 0, NULL, 0);
 
-			
-
 			if (r == 0 )
 			{
 				if ( verbose > 3 )
@@ -218,5 +216,3 @@ int main (int argc, const char *argv[])
 	return run(prog,( char **)args,  check, timeout, verbose);
 
 }
- 
- 
